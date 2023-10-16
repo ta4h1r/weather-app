@@ -1,0 +1,32 @@
+version: '3'
+services:
+  db:
+    image: "redis/redis-stack:latest"
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 50M
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # server:
+  #   build: ./server
+  #   volumes:
+  #     - .:/usr/src/app
+  #   ports:
+  #     - "5001:5001"
+  #   depends_on:
+  #     - redis
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.50'
+  #         memory: 50M
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: on-failure
