@@ -1,136 +1,122 @@
-import json, os, requests, base64
-
-from django import forms
-from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
-from django.urls import reverse
-from django.views import generic
+import json
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import authenticate
 
 from pydantic import ValidationError
-
 from redis_om.model import NotFoundError
 from redis_om import Migrator
 
 from .models import WeatherItem
-    
-Migrator().run() 
+from .utils import *
 
-API_KEY = os.environ.get('API_KEY', '')
-BASE_URL = "http://api.openweathermap.org/data/2.5/"
+Migrator().run()
 
-def build_results(entity):
-    results = []
-    for item in entity:
-        results.append(item.dict())
-    return results
-
-
-def get_weather_recommendation(weather): 
-    # recommendation = new Recommendation(weather_item)
-    # return recommendation
-    print(json.loads(weather))
-
-
-    # feels like in range -> carry jacket, take a swim, stay in bed, 
-    # high temp fluctutation -> carry a jacket
-
-    # Use GPT to make hundreds of variations for your dictionaries 
-    return 0
-
-def get_weather_for_city(city): 
-    url = BASE_URL + "weather?" + "appid=" + API_KEY + "&q=" + city
-    print(url)
-    return json.dumps( requests.get(url).json() )
-
-def convertToUnit(temp, unit): 
-    return temp
-
-def store_weather_recommendation(weather, unit): 
-    get_weather_recommendation(weather)
-    # print (weather["dt"])
-    # new_weather_item = WeatherItem(**{
-    #     "timestamp": weather["dt"],
-    #     "city": weather["name"], 
-    #     "recommendation": {
-
-    #     }, 
-    #     "weather": {
-    #         "temperature": convertToUnit(weather["main"]["temp"], unit), 
-    #         "unit": unit, 
-    #     }
-    # })
-    # new_person = Weather(**req_body)
-        # new_person.save()
-        # return HttpResponse(new_person.pk)
-    return weather
-
-
-def index(request): 
-    try:     
+def index(request):
+    try:
         city = request.GET.get('city')
-        if(city == None): 
-            raise NotFoundError
-        
+        if (not city):
+            HttpResponse.status_code = 400
+            return HttpResponse("Bad request")
         w = build_results(
             WeatherItem.find(
                 (WeatherItem.city == city)
             )
         )
-        res = json.dumps((w))
-
-        return HttpResponse(res)
+        if w == []:
+            raise NotFoundError
+        return JsonResponse(w, safe=False)
     except (NotFoundError) as e:
         HttpResponse.status_code = 404
-        return HttpResponse("City not found.")
+        return HttpResponse("City not found in database")
     except (ValidationError) as e:
         HttpResponse.status_code = 400
-        return HttpResponse("Bad request")
+        return HttpResponse("Bad request" + + str(e))
     except (TypeError) as e:
         print(e)
         HttpResponse.status_code = 500
         return HttpResponse("Internal server error: " + str(e))
 
+
+def get_by_id(request, id):
+    if (request.method != "GET"):
+        HttpResponse.status_code = 400
+        return HttpResponse("Bad request method: Should be GET")
+
+    try:
+        w = WeatherItem.get(id).dict()
+        if not w:
+            raise NotFoundError
+        return JsonResponse(w, safe=False)
+    except (NotFoundError) as e:
+        HttpResponse.status_code = 404
+        return HttpResponse("City not found in database")
+    except (ValidationError) as e:
+        HttpResponse.status_code = 400
+        return HttpResponse("Bad request" + str(e))
+    except (TypeError) as e:
+        HttpResponse.status_code = 500
+        return HttpResponse("Internal server error: " + str(e))
+
+
+def get_latest_for_city(request, city):
+    try:
+        if (request.method != "GET"):
+            HttpResponse.status_code = 400
+            return HttpResponse("Bad request: Should be GET")
+        w = build_results(
+            WeatherItem.find(
+                (WeatherItem.city == city)
+            ).sort_by("timestamp")
+        )
+        if w == []:
+            raise NotFoundError
+        return JsonResponse(w[-1], safe=False)
+    except (NotFoundError) as e:
+        HttpResponse.status_code = 404
+        return HttpResponse("City not found in database")
+    except (ValidationError) as e:
+        HttpResponse.status_code = 400
+        return HttpResponse("Bad request" + str(e))
+    except (TypeError) as e:
+        print(e)
+        HttpResponse.status_code = 500
+        return HttpResponse("Internal server error: " + str(e))
+
+
 @csrf_exempt
 def new(request):
-    if(request.method != "POST"): 
-        return HttpResponse("Invalid method")   
+    if (request.method != "POST"):
+        return HttpResponse("Invalid method: Should be POST")
 
     if not is_valid_post_request(request):
         HttpResponse.status_code = 404
-        return HttpResponse("Bad request")
-    
-    try:    
+        return HttpResponse("Bad request: Invalid body")
+
+    try:
         req_body = json.loads(request.body)
         city = req_body["city"]
         temperature_unit = req_body["unit"]
-        if(city == None): 
+        if (city == None):
             raise NotFoundError
-        
-        return HttpResponse(
-            store_weather_recommendation(
-                get_weather_for_city(city), 
-                temperature_unit
-            )
+
+        stored_weather_data = store_weather_data(
+            get_weather_for_city(city),
+            temperature_unit
+        )
+        return JsonResponse(
+            {
+                "message": "Successfully stored weather data and recommendation",
+                "data": {
+                    "id": stored_weather_data["pk"],
+                    "timestamp": stored_weather_data["timestamp"],
+                    "city": stored_weather_data["city"]
+                }
+            }, safe=False
         )
     except ValidationError as e:
-        print(e)
         HttpResponse.status_code = 400
-        return HttpResponse("Bad request")
+        return HttpResponse("Bad request" + str(e))
     except (NotFoundError) as e:
         HttpResponse.status_code = 404
-        return HttpResponse("Not found.")
+        return HttpResponse("Not found" + str(e))
 
-
-def is_valid_post_request(request): 
-    template = {
-        "city": str, 
-        "unit": str
-    }
-    if (not request.body): 
-        return False
-    for key, value in template.items(): 
-        if type(json.loads(request.body)[key]) != value: 
-            return False
-    return True

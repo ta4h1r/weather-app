@@ -30,7 +30,7 @@ class Recommendation(EmbeddedJsonModel):
     clothing: Optional[str] = Field(index=False)
 
 class WeatherItem(JsonModel):
-    timestamp: int = Field(index=False)
+    timestamp: int = Field(index=True)
     city: str = Field(index=True)
     weather: Weather
     recommendation: Recommendation
