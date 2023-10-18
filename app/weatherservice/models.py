@@ -18,15 +18,20 @@ class Precipitation(EmbeddedJsonModel):
 # class WeatherDescription(EmbeddedJsonModel):
 #     rain: int = Field(index=False)
 
-class WeatherItem(EmbeddedJsonModel):
+class Weather(EmbeddedJsonModel):
     temperature: Optional[Temperature]
     wind: Optional[Wind]
     precipitation: Optional[Precipitation]
+    summary: Optional[str] = Field(index=False)
     description: Optional[str] = Field(index=False)
 
+class Recommendation(EmbeddedJsonModel):
+    actions: Optional[str] = Field(index=False)
+    clothing: Optional[str] = Field(index=False)
 
-class Weather(JsonModel):
+class WeatherItem(JsonModel):
+    timestamp: int = Field(index=False)
     city: str = Field(index=True)
-    weather: WeatherItem
-
+    weather: Weather
+    recommendation: Recommendation
 
