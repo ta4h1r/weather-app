@@ -57,11 +57,9 @@ def get_combo(heuristics):
             "none": None
         },
         "wind_ranges": {
-            "vWindy": "Avoid outdoor activities",
-            "windy": "Wear windproof clothing",
-            "comfortable": "Enjoy the breeze",
-            "hot": "Stay hydrated",
-            "vHot": "Stay indoors or in shade"
+            "vWindy": "Wear windproof clothing",
+            "windy": "Enjoy the breeze",
+            "calm": None,
         },
         "temp_fluctuation_ranges": {
             "extreme": "Be prepared for sudden temperature changes",
@@ -74,7 +72,7 @@ def get_combo(heuristics):
     heat_ranges = ["vCold", "cold", "comfortable", "hot", "vHot"]
     wetness_ranges = ["heavy", "wet", "light", "dry"]
     snow_ranges = ["heavy", "moderate", "light", "none"]
-    wind_ranges = ["vWindy", "windy", "comfortable", "hot", "vHot"]
+    wind_ranges = ["vWindy", "windy", "calm"]
     temp_fluctuation_ranges = ["extreme", "mild", "negligible"]
 
     # Generate the combinations and assign actions
@@ -101,13 +99,13 @@ def get_combo(heuristics):
 def calculate_heuristics(weather):
     t = convert_to_unit(weather["main"]["feels_like"], "c")
     tf = calculate_temp_fluctuation(weather)
-    r = 0 if "rain" not in weather else weather["rain"]["3h"]
-    s = 0 if "snow" not in weather else weather["snow"]["3h"]
+    r = 0 if "rain" not in weather else weather["rain"]["1h"] if "3h" not in weather["rain"] else weather["rain"]["3h"]
+    s = 0 if "snow" not in weather else weather["snow"]["1h"] if "3h" not in weather["snow"] else weather["snow"]["3h"]
     w = weather["wind"]["speed"]
     heat_ranges = {
         "vCold": "t < 10",
-        "cold": "10 < t < 20",
-        "comfortable": "20 < t < 26",
+        "cold": "10 < t < 16",
+        "comfortable": "16 < t < 26",
         "hot": "26 < t < 32",
         "vHot": "t > 32"
     }
@@ -124,11 +122,9 @@ def calculate_heuristics(weather):
         "none": "s < 1"
     }
     wind_ranges = {
-        "vWindy": "w < 10",
-        "windy": "10 < w < 20",
-        "comfortable": "20 < w < 26",
-        "hot": "26 < w < 32",
-        "vHot": "w > 32"
+        "vWindy": "w > 10",
+        "windy": "5 < w < 10",
+        "calm": "w < 5",
     }
     temp_fluctuation_ranges = {
         "extreme": "tf > 15",

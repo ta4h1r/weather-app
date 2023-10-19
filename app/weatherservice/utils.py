@@ -15,27 +15,31 @@ def build_results(entity):
     return results
 
 
-def get_recommended_action(combination):
+def build_recommended_action_string(combination):
     c = [x for x in combination[-5:] if x is not None]
     action = ""
     count = 0
     for str in c: 
-        if count == 0: 
+        if count == 0 and count != len(c) - 1: 
             action += str + ", "
             count += 1
             continue
+        elif count == 0 and count == len(c) - 1:
+            action += str + "."
+            count += 1
+            break
         elif count == len(c) - 1:
             action += "and " + str.lower() + "."
             count = 0
             break
-        action += str + ", "
+        action += str.lower() + ", "
         count += 1
     return action
 
 
 def get_weather_recommendation(weather):
     heuristics = calculate_heuristics(weather)
-    return get_recommended_action(get_combo(heuristics))
+    return build_recommended_action_string(get_combo(heuristics))
 
 
 def get_weather_for_city(city):
@@ -64,8 +68,8 @@ def store_weather_data(weather, unit):
             "description": w["weather"][0]["description"],
         },
         "precipitation": {
-            "rain": (w["rain"]["3h"] if "rain" in w else ""),
-            "snow": (w["snow"]["3h"] if "snow" in w else "")
+            "rain": ("N/A" if "rain" not in w else w["rain"]["1h"] if "3h" not in w["rain"] else w["rain"]["3h"]),
+            "snow": ("N/A" if "snow" not in w else w["snow"]["1h"] if "3h" not in w["snow"] else w["snow"]["3h"])
         }
     })
     new_weather_item.save()
@@ -73,13 +77,15 @@ def store_weather_data(weather, unit):
 
 
 def is_valid_post_request(request):
-    template = {
-        "city": str,
-        "unit": str
-    }
-    if (not request.body):
-        return False
-    for key, value in template.items():
-        if type(json.loads(request.body)[key]) != value:
+    try: 
+        template = {
+            "city": str
+        }
+        if (not request.body):
             return False
-    return True
+        for key, value in template.items():
+            if type(json.loads(request.body)[key]) != value:
+                return False
+        return True
+    except (KeyError): 
+        return False

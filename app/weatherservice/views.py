@@ -96,7 +96,7 @@ def new(request):
     try:
         req_body = json.loads(request.body)
         city = req_body["city"]
-        temperature_unit = req_body["unit"]
+        temperature_unit = "Kelvin" if "unit" not in req_body else req_body["unit"]
         if (city == None):
             raise NotFoundError
 
@@ -106,12 +106,16 @@ def new(request):
         )
         return JsonResponse(
             {
-                "message": "Successfully stored weather data and recommendation",
+                "message": "Successfully stored weather information",
                 "data": {
                     "id": stored_weather_data["pk"],
                     "timestamp": stored_weather_data["timestamp"],
-                    "city": stored_weather_data["city"]
-                }
+                    "city": stored_weather_data["city"],
+                    "summary": stored_weather_data["weather"]["summary"],
+                    "description": stored_weather_data["weather"]["description"], 
+                    "temperature": str(stored_weather_data["weather"]["temperature"]["value"]) + " " + stored_weather_data["weather"]["temperature"]["unit"], 
+                    "recommendation": stored_weather_data["recommendation"]
+                }, 
             }, safe=False
         )
     except ValidationError as e:

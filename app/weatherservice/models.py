@@ -1,5 +1,4 @@
 from redis_om import (EmbeddedJsonModel, Field, JsonModel)
-from pydantic import PositiveInt
 from typing import Optional
 
 class Temperature(EmbeddedJsonModel):
