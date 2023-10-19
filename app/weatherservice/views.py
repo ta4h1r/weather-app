@@ -11,19 +11,21 @@ from .utils import *
 
 Migrator().run()
 
+
 def index(request):
     try:
+        w = []
         city = request.GET.get('city')
-        if (not city):
-            HttpResponse.status_code = 400
-            return HttpResponse("Bad request")
-        w = build_results(
-            WeatherItem.find(
-                (WeatherItem.city == city)
+        if (city):
+            w = build_results(
+                WeatherItem.find(
+                    (WeatherItem.city == city)
+                )
             )
-        )
-        if w == []:
-            raise NotFoundError
+        else:
+            w = build_results(
+                WeatherItem.find()
+            )
         return JsonResponse(w, safe=False)
     except (NotFoundError) as e:
         HttpResponse.status_code = 404
@@ -66,7 +68,7 @@ def get_latest_for_city(request, city):
         w = build_results(
             WeatherItem.find(
                 (WeatherItem.city == city)
-            ).sort_by("timestamp")
+            )
         )
         if w == []:
             raise NotFoundError
@@ -119,4 +121,3 @@ def new(request):
     except (NotFoundError) as e:
         HttpResponse.status_code = 404
         return HttpResponse("Not found" + str(e))
-
