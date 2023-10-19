@@ -20,6 +20,10 @@ def auth_middleware(get_response):
 
         response = get_response(request)
 
+        # Bypass basic auth for admin page
+        if ("/admin" in request.path_info):
+            return response
+
         # Code to be executed for each request/response after
         # the view is called.
 
