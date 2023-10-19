@@ -13,10 +13,6 @@ class Wind(EmbeddedJsonModel):
 class Precipitation(EmbeddedJsonModel):
     rain: int = Field(index=False)
     snow: str = Field(index=False)
-    snow: str = Field(index=False)
-
-# class WeatherDescription(EmbeddedJsonModel):
-#     rain: int = Field(index=False)
 
 class Weather(EmbeddedJsonModel):
     temperature: Optional[Temperature]
@@ -25,13 +21,9 @@ class Weather(EmbeddedJsonModel):
     summary: Optional[str] = Field(index=False)
     description: Optional[str] = Field(index=False)
 
-class Recommendation(EmbeddedJsonModel):
-    actions: Optional[str] = Field(index=False)
-    clothing: Optional[str] = Field(index=False)
-
 class WeatherItem(JsonModel):
-    timestamp: int = Field(index=True)
+    timestamp: int = Field(index=False)
     city: str = Field(index=True)
+    recommendation: str = Field(index=False)
     weather: Weather
-    recommendation: Recommendation
 

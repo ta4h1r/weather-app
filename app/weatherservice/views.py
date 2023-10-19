@@ -43,7 +43,6 @@ def get_by_id(request, id):
     if (request.method != "GET"):
         HttpResponse.status_code = 400
         return HttpResponse("Bad request method: Should be GET")
-
     try:
         w = WeatherItem.get(id).dict()
         if not w:

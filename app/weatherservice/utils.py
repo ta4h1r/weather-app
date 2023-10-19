@@ -2,6 +2,7 @@ import json
 import requests
 import os
 from .models import WeatherItem
+from .calculations import get_combo, calculate_heuristics, convert_to_unit
 
 API_KEY = os.environ.get('API_KEY', '')
 BASE_URL = "http://api.openweathermap.org/data/2.5/"
@@ -14,20 +15,27 @@ def build_results(entity):
     return results
 
 
+def get_recommended_action(combination):
+    c = [x for x in combination[-5:] if x is not None]
+    action = ""
+    count = 0
+    for str in c: 
+        if count == 0: 
+            action += str + ", "
+            count += 1
+            continue
+        elif count == len(c) - 1:
+            action += "and " + str.lower() + "."
+            count = 0
+            break
+        action += str + ", "
+        count += 1
+    return action
+
+
 def get_weather_recommendation(weather):
-    # TODO
-    # recommendation = new Recommendation(weather_item)
-    # return recommendation
-    # print(json.loads(weather))
-
-    # feels like in range -> carry jacket, take a swim, stay in bed,
-    # high temp fluctutation -> carry a jacket
-
-    # Use GPT to make hundreds of variations for your dictionaries
-    return {
-        "actions": "Go away",
-        "clothing": "Kimono"
-    }
+    heuristics = calculate_heuristics(weather)
+    return get_recommended_action(get_combo(heuristics))
 
 
 def get_weather_for_city(city):
@@ -36,33 +44,9 @@ def get_weather_for_city(city):
     return json.dumps(requests.get(url).json())
 
 
-def to_celcius(temp):
-    kelvin_temp = temp
-    celcius_temp = kelvin_temp - 273.15
-    return celcius_temp
-
-
-def to_farenheit(temp):
-    kelvin_temp = temp
-    celcius_temp = to_celcius(kelvin_temp)
-    farenheit_temp = celcius_temp * 9/5 + 32
-    return farenheit_temp
-
-
-def convert_to_unit(temp, unit):
-    t = temp
-    if (unit.lower() == "farenheit" |
-            unit.lower() == "f"):
-        t = to_farenheit(temp)
-    if (unit.lower() == "celcius" |
-            unit.lower() == "c"):
-        t = to_celcius(temp)
-    return t
-
-
 def store_weather_data(weather, unit):
-    r = get_weather_recommendation(weather)
     w = json.loads(weather)
+    r = get_weather_recommendation(w)
     new_weather_item = WeatherItem(**{
         "timestamp": w["dt"],
         "city": w["name"],
@@ -78,6 +62,10 @@ def store_weather_data(weather, unit):
             },
             "summary": w["weather"][0]["main"],
             "description": w["weather"][0]["description"],
+        },
+        "precipitation": {
+            "rain": (w["rain"]["3h"] if "rain" in w else ""),
+            "snow": (w["snow"]["3h"] if "snow" in w else "")
         }
     })
     new_weather_item.save()
